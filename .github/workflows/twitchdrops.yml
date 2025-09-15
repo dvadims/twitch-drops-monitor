@@ -2,34 +2,42 @@ name: Проверка страницы Twitch Drops
 
 on:
   schedule:
-    - cron: '*/15 * * * *'      # запуск каждые 15 минут
-  workflow_dispatch:            # разрешает запуск вручную
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   check_page:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: true
 
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: pip install requests
 
-      - name: Check Twitch Drops Page
-        run: python3 check_twitchdrops.py
+      - name: Run check script
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: python3 check_twitchdrops.py
 
-      - name: Commit updated page content
+      - name: Commit updated page content (if changed)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "actions@github.com"
-          git add twitchdrops.html
+          git add twitchdrops.html || true
           if ! git diff --cached --quiet; then
-            git commit -m "Обновление содержимого страницы Twitch Drops"
+            git commit -m "ci: update twitchdrops.html"
             git push
+          else
+            echo "No changes to commit"
           fi
